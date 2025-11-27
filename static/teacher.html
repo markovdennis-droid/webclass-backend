@@ -384,7 +384,39 @@ function sendMessage() {
 
   box.value = "";
 }
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get("room") || "room1";
+  const teacherName = params.get("name") || "Учитель";
+
+  // Подписываем подписи в шапке
+  document.getElementById("roomNameLabel").textContent = room;
+  document.getElementById("teacherNameLabel").textContent = teacherName;
+
+  // Собираем ссылку для ученика НА ТОМ ЖЕ ДОМЕНЕ
+  const studentLink = `${window.location.origin}/student?room=${encodeURIComponent(
+    room
+  )}&teacher=${encodeURIComponent(teacherName)}`;
+
+  const studentLinkInput = document.getElementById("studentLink");
+  const copyBtn = document.getElementById("copyStudentLinkBtn");
+
+  studentLinkInput.value = studentLink;
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(studentLink);
+      copyBtn.textContent = "Скопировано";
+      setTimeout(() => (copyBtn.textContent = "Скопировать"), 1500);
+    } catch (e) {
+      console.error(e);
+      alert("Не получилось скопировать, выделите ссылку и скопируйте вручную.");
+    }
+  });
+
+  // ... дальше идёт твой существующий код WebSocket/WebRTC ...
 </script>
+
 
 </body>
   <div class="top-panel">
