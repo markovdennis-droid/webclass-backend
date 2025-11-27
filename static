@@ -1,2 +1,1397 @@
-static/teacher.html
-static/student.html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>WebClass — Комната ученика</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bg-grad: linear-gradient(145deg, #020617 0%, #0b1635 45%, #020617 100%);
+            --panel: rgba(15,23,42,0.96);
+            --panel-soft: rgba(15,23,42,0.9);
+            --border: #1e293b;
+            --accent: #4f46e5;
+            --accent-soft: rgba(79,70,229,0.2);
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+        }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-grad);
+            background-attachment: fixed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-main);
+        }
+        .card {
+            background: radial-gradient(circle at top left, #020617 0%, #020617 55%, #000 100%);
+            backdrop-filter: blur(18px);
+            padding: 20px 22px 24px;
+            border-radius: 22px;
+            width: 1400px;
+            max-width: 98vw;
+            border: 1px solid rgba(148,163,184,0.25);
+            box-shadow: 0 24px 55px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 6px;
+            align-items: baseline;
+        }
+        h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .room {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .bottom-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.3fr) minmax(0, 1.35fr);
+            gap: 14px;
+            align-items: stretch;
+        }
+        .video-column {
+            background: var(--panel);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 10px 10px 12px;
+            display: flex;
+            flex-direction: column;
+            min-height: 340px;
+        }
+        .video-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .video-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .viewport {
+            flex: 1;
+            border-radius: 14px;
+            background: radial-gradient(circle at top, #020617 0%, #000 100%);
+            border: 1px solid rgba(30,64,175,0.7);
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 9 / 16;
+            align-self: stretch;
+            width: 100%;
+        }
+        .viewport video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+            display: block;
+        }
+        .video-toolbar {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+        .icon-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.45);
+            background: rgba(15,23,42,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .icon-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+        }
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 0 12px;
+            pointer-events: none;
+        }
+        .video-placeholder b {
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        /* ЧАТ ПО СЕРЕДИНЕ */
+        .chat-panel {
+            background: var(--panel);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            min-height: 340px;
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .chat-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .chat-status {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .chat-messages {
+            flex: 1;
+            background: #020617;
+            border-radius: 10px;
+            border: 1px solid #111827;
+            padding: 8px;
+            overflow-y: auto;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .chat-empty {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 18px;
+        }
+        .chat-input-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .chat-input-row input[type="text"] {
+            flex: 1;
+            border-radius: 10px;
+            border: 1px solid #374151;
+            padding: 8px 10px;
+            font-size: 13px;
+            background: #020617;
+            color: var(--text-main);
+        }
+        .chat-input-row input::placeholder {
+            color: #6b7280;
+        }
+        .chat-send-btn {
+            background: #16a34a;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+        }
+        .chat-send-btn:hover {
+            background: #15803d;
+        }
+        .chat-attach {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            background: #020617;
+            color: #e5e7eb;
+        }
+        .chat-attach:hover {
+            background: #111827;
+        }
+        .chat-note {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        .msg {
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+        .msg-you {
+            text-align: right;
+        }
+        .msg-author {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        .msg-bubble {
+            display: inline-block;
+            margin-top: 1px;
+            padding: 6px 9px;
+            border-radius: 9px;
+            background: #111827;
+        }
+        .msg-you .msg-bubble {
+            background: #1d4ed8;
+        }
+        /* fullscreen для окна учителя у ученика */
+        #remoteViewportStudent:fullscreen {
+            background: #000;
+            max-width: none;
+            width: 100%;
+            height: 100%;
+        }
+        #remoteViewportStudent:fullscreen video {
+            object-fit: contain;
+        }
+        @media (max-width: 980px) {
+            .card {
+                width: 100%;
+                margin: 6px;
+                padding: 14px;
+            }
+            .bottom-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="top-row">
+        <h2>Урок WebClass</h2>
+        <div id="roomInfo" class="room"></div>
+    </div>
+
+    <div class="bottom-row">
+        <!-- ЛЕВАЯ КОЛОНКА: УЧИТЕЛЬ ДЛЯ УЧЕНИКА -->
+        <div class="video-column">
+            <div class="video-title">Учитель</div>
+            <div class="video-sub" id="teacherNameLabel">—</div>
+            <div class="viewport" id="remoteViewportStudent">
+                <video id="remoteVideoStudent" autoplay playsinline muted></video>
+                <div class="video-toolbar">
+                    <button id="remoteFullscreenStudent" class="icon-btn" title="На весь экран">⤢</button>
+                    <button id="remoteMuteStudent" class="icon-btn" title="Вкл/выкл звук">🔇</button>
+                </div>
+                <div class="video-placeholder" id="remotePlaceholderStudent">
+                    <div>Окно учителя</div>
+                    <b>Учитель</b>
+                    <div>Когда учитель начнёт урок, здесь появится его видео.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЦЕНТР: ЧАТ -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-title">Чат урока</div>
+                <div class="chat-status">Сообщения пока видите только вы</div>
+            </div>
+            <div id="chatMessagesStudent" class="chat-messages">
+                <div class="chat-empty">
+                    Задайте вопрос учителю — позже мы сделаем так, чтобы он видел это сообщение.
+                </div>
+            </div>
+            <div class="chat-input-row">
+                <label class="chat-attach" title="Прикрепить файл">
+                    📎
+                    <input type="file" id="chatFileStudent" style="display:none;">
+                </label>
+                <input id="chatInputStudent" type="text" placeholder="Написать сообщение учителю...">
+                <button id="chatSendStudent" class="chat-send-btn">Отправить</button>
+            </div>
+            <div class="chat-note">
+                Прикрепление файлов до 10 МБ (PDF, изображения). Это демо — без реальной загрузки.
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: УЧЕНИК (СЕБЯ ВИДИТ) -->
+        <div class="video-column">
+            <div class="video-title">Вы (ученик)</div>
+            <div class="video-sub">Камера и микрофон вашего устройства</div>
+            <div class="viewport" id="localViewportStudent">
+                <video id="localVideoStudent" autoplay playsinline muted></video>
+                <div class="video-toolbar">
+                    <button id="selfMuteStudent" class="icon-btn" title="Вкл/выкл микрофон">🎤</button>
+                </div>
+                <div class="video-placeholder" id="localPlaceholderStudent">
+                    <div>Включаем камеру...</div>
+                    <div style="font-size:11px;">Разрешите доступ к камере и микрофону в браузере.</div>
+                </div>
+            </div>
+            <button class="chat-send-btn" style="margin-top:10px;" onclick="goHome()">Выйти из урока</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room") || "demo-room";
+const teacherName = params.get("teacher") || "Учитель";
+
+const roomInfoEl = document.getElementById("roomInfo");
+const teacherNameLabel = document.getElementById("teacherNameLabel");
+if (roomInfoEl) roomInfoEl.textContent = "Комната: " + room;
+if (teacherNameLabel) teacherNameLabel.textContent = teacherName;
+
+// ===== ЧАТ УЧЕНИКА (локальный демо) =====
+const chatMessagesS = document.getElementById("chatMessagesStudent");
+const chatInputS = document.getElementById("chatInputStudent");
+const chatSendS = document.getElementById("chatSendStudent");
+const chatFileS = document.getElementById("chatFileStudent");
+
+function addStudentMessage(text, isFile = false) {
+  if (!text || !text.trim() || !chatMessagesS) return;
+
+  const empty = chatMessagesS.querySelector(".chat-empty");
+  if (empty) empty.remove();
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg msg-you";
+
+  const author = document.createElement("div");
+  author.className = "msg-author";
+  author.textContent = isFile ? "Файл (демо)" : "Вы";
+
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble";
+  bubble.textContent = text;
+
+  wrapper.appendChild(author);
+  wrapper.appendChild(bubble);
+  chatMessagesS.appendChild(wrapper);
+
+  chatMessagesS.scrollTop = chatMessagesS.scrollHeight;
+}
+
+if (chatSendS && chatInputS) {
+  chatSendS.addEventListener("click", () => {
+    addStudentMessage(chatInputS.value);
+    chatInputS.value = "";
+  });
+
+  chatInputS.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addStudentMessage(chatInputS.value);
+      chatInputS.value = "";
+    }
+  });
+}
+
+if (chatFileS) {
+  chatFileS.addEventListener("change", () => {
+    if (!chatFileS.files || chatFileS.files.length === 0) return;
+    const file = chatFileS.files[0];
+    addStudentMessage(`Файл: ${file.name} (демо)`, true);
+    chatFileS.value = "";
+  });
+}
+
+function goHome() {
+  window.location.href = "/";
+}
+window.goHome = goHome; // чтобы работала кнопка
+
+// ===== ЛОКАЛЬНОЕ ВИДЕО УЧЕНИКА =====
+let localStreamStudent = null;
+let isMicMutedStudent = false;
+
+async function startLocalVideoStudent() {
+  const previewVideo = document.getElementById("localVideoStudent");
+  const placeholder = document.getElementById("localPlaceholderStudent");
+  if (!previewVideo) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localStreamStudent = stream;
+    previewVideo.srcObject = stream;
+    previewVideo.muted = true; // чтобы у ученика не фонило
+    previewVideo.playsInline = true;
+    if (placeholder) placeholder.style.display = "none";
+    maybeAttachLocalTracksStudent();
+  } catch (err) {
+    console.error("Ошибка доступа к камере ученика:", err);
+    if (placeholder) {
+      placeholder.textContent = "Не удалось включить камеру. Разрешите доступ к камере в браузере.";
+    }
+  }
+}
+
+function toggleStudentMic() {
+  if (!localStreamStudent) return;
+  isMicMutedStudent = !isMicMutedStudent;
+  localStreamStudent.getAudioTracks().forEach(t => t.enabled = !isMicMutedStudent);
+  const btn = document.getElementById("selfMuteStudent");
+  if (btn) btn.textContent = isMicMutedStudent ? "🎤✕" : "🎤";
+}
+
+// ===== ДИСТАНЦИОННОЕ ВИДЕО УЧИТЕЛЯ (звук + fullscreen) =====
+let isRemoteMutedStudent = false; // ученик по умолчанию слышит учителя
+
+function toggleRemoteMuteStudent() {
+  const video = document.getElementById("remoteVideoStudent");
+  if (!video) return;
+  isRemoteMutedStudent = !isRemoteMutedStudent;
+  video.muted = isRemoteMutedStudent;
+  const btn = document.getElementById("remoteMuteStudent");
+  if (btn) btn.textContent = isRemoteMutedStudent ? "🔇" : "🔊";
+}
+
+function toggleFullscreen(el, btn) {
+  if (!el) return;
+  if (!document.fullscreenElement) {
+    if (el.requestFullscreen) {
+      el.requestFullscreen();
+      if (btn) btn.textContent = "⤡";
+    }
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+document.addEventListener("fullscreenchange", () => {
+  const btn = document.getElementById("remoteFullscreenStudent");
+  if (!btn) return;
+  if (!document.fullscreenElement) {
+    btn.textContent = "⤢";
+  }
+});
+
+// ===== WebRTC + WebSocket (ученик принимает offer) =====
+let wsStudent = null;
+let pcStudent = null;
+
+function createWebSocketStudent() {
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  const wsUrl = `${proto}://${window.location.host}/ws?room=${encodeURIComponent(room)}&role=student`;
+  wsStudent = new WebSocket(wsUrl);
+
+  wsStudent.onopen = () => {
+    console.log("[student] WebSocket открыт");
+  };
+
+  wsStudent.onmessage = async (event) => {
+    const msg = JSON.parse(event.data || "{}");
+    const type = msg.type;
+    console.log("[student] WS message:", msg);
+
+    if (type === "both-ready") {
+      // ничего делать не нужно, ждём offer от учителя
+    } else if (type === "offer") {
+      const pc = ensurePeerConnectionStudent();
+      const desc = new RTCSessionDescription(msg.sdp);
+      await pc.setRemoteDescription(desc);
+      console.log("[student] Получен offer, отправляем answer");
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      wsStudent.send(JSON.stringify({
+        type: "answer",
+        sdp: answer
+      }));
+    } else if (type === "ice-candidate") {
+      if (!pcStudent || !msg.candidate) return;
+      try {
+        await pcStudent.addIceCandidate(msg.candidate);
+      } catch (e) {
+        console.warn("Ошибка addIceCandidate (student):", e);
+      }
+    }
+  };
+
+  wsStudent.onclose = () => {
+    console.log("[student] WebSocket закрыт");
+  };
+
+  wsStudent.onerror = (e) => {
+    console.error("[student] WebSocket error:", e);
+  };
+}
+
+function ensurePeerConnectionStudent() {
+  if (pcStudent) return pcStudent;
+
+  pcStudent = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" }
+    ]
+  });
+
+  maybeAttachLocalTracksStudent();
+
+  pcStudent.onicecandidate = (event) => {
+    if (event.candidate && wsStudent && wsStudent.readyState === WebSocket.OPEN) {
+      wsStudent.send(JSON.stringify({
+        type: "ice-candidate",
+        candidate: event.candidate
+      }));
+    }
+  };
+
+  pcStudent.ontrack = (event) => {
+    const remoteVideo = document.getElementById("remoteVideoStudent");
+    const placeholder = document.getElementById("remotePlaceholderStudent");
+    if (remoteVideo && !remoteVideo.srcObject) {
+      remoteVideo.srcObject = event.streams[0];
+      remoteVideo.playsInline = true;
+      remoteVideo.muted = isRemoteMutedStudent;
+    }
+    if (placeholder) placeholder.style.display = "none";
+  };
+
+  return pcStudent;
+}
+
+function maybeAttachLocalTracksStudent() {
+  if (!localStreamStudent || !pcStudent) return;
+  if (pcStudent.getSenders().length > 0) return; // уже добавили
+  localStreamStudent.getTracks().forEach(track => {
+    pcStudent.addTrack(track, localStreamStudent);
+  });
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+window.addEventListener("DOMContentLoaded", () => {
+  startLocalVideoStudent();
+  createWebSocketStudent();
+
+  const micBtn = document.getElementById("selfMuteStudent");
+  if (micBtn) micBtn.addEventListener("click", toggleStudentMic);
+
+  const remoteMuteBtn = document.getElementById("remoteMuteStudent");
+  if (remoteMuteBtn) remoteMuteBtn.addEventListener("click", toggleRemoteMuteStudent);
+
+  const fsBtn = document.getElementById("remoteFullscreenStudent");
+  const remoteViewport = document.getElementById("remoteViewportStudent");
+  if (fsBtn && remoteViewport) {
+    fsBtn.addEventListener("click", () => toggleFullscreen(remoteViewport, fsBtn));
+  }
+});
+
+</script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebClass — Учитель</title>
+    <style>
+        :root {
+            --bg-grad: linear-gradient(145deg, #020617 0%, #0b1635 45%, #020617 100%);
+            --panel: rgba(15,23,42,0.96);
+            --panel-soft: rgba(15,23,42,0.9);
+            --border: #1e293b;
+            --accent: #4f46e5;
+            --accent-soft: rgba(79,70,229,0.2);
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-grad);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-main);
+        }
+
+        .container {
+            background: radial-gradient(circle at top left, #020617 0%, #020617 55%, #000 100%);
+            padding: 20px 22px 24px;
+            border-radius: 22px;
+            box-shadow: 0 26px 60px rgba(0,0,0,0.6);
+            width: 1400px;
+            max-width: 98vw;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* верхняя панель */
+
+        .top-row {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+
+        .link-block {
+            flex: 1.6;
+            background: var(--panel);
+            border-radius: 16px;
+            padding: 12px 14px 12px;
+            border: 1px solid rgba(148,163,184,0.28);
+        }
+
+        .link-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .link-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .link-toggle {
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            padding: 3px 7px;
+            border-radius: 999px;
+        }
+
+        .link-toggle:hover {
+            background: rgba(148,163,184,0.18);
+        }
+
+        .room-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .link-content.hidden {
+            display: none;
+        }
+
+        .link-input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #4b5563;
+            font-size: 13px;
+            background: #020617;
+            color: var(--text-main);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent-soft);
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: none;
+            background-color: var(--accent);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background .15s, transform .05s;
+        }
+
+        .btn:hover {
+            background-color: #4338ca;
+            transform: translateY(-1px);
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .teacher-info {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--panel-soft);
+        }
+
+        .teacher-info b {
+            color: var(--text-main);
+        }
+
+        /* нижняя часть: три вертикальных блока */
+
+        .bottom-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.3fr) minmax(0, 1.35fr);
+            gap: 14px;
+            align-items: stretch;
+        }
+
+        .video-column {
+            background: var(--panel);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 10px 10px 12px;
+            display: flex;
+            flex-direction: column;
+            min-height: 340px;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .video-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .viewport {
+            flex: 1;
+            border-radius: 14px;
+            background: radial-gradient(circle at top, #020617 0%, #000 100%);
+            border: 1px solid rgba(30,64,175,0.7);
+            position: relative;
+            overflow: hidden;
+            /* вертикальный формат как телефон */
+            aspect-ratio: 9 / 16;
+            align-self: center;
+            width: 100%;
+            max-width: min(33vw, 520px);
+        }
+
+        .viewport video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* заполняем блок как 1080x1920, можно с обрезкой */
+            background: #000;
+            display: block;
+        }
+
+        .video-toolbar {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .icon-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,0.45);
+            background: rgba(15,23,42,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+        }
+
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 0 12px;
+            pointer-events: none;
+        }
+
+        .video-placeholder b {
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        /* ЧАТ ПО СЕРЕДИНЕ */
+
+        .chat-panel {
+            background: var(--panel);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+            min-height: 340px;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .chat-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .chat-status {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .chat-messages {
+            flex: 1;
+            background: #020617;
+            border-radius: 10px;
+            border: 1px solid #111827;
+            padding: 8px;
+            overflow-y: auto;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .chat-empty {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 18px;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .chat-input-row input[type="text"] {
+            flex: 1;
+            border-radius: 10px;
+            border: 1px solid #374151;
+            padding: 8px 10px;
+            font-size: 13px;
+            background: #020617;
+            color: var(--text-main);
+        }
+
+        .chat-input-row input::placeholder {
+            color: #6b7280;
+        }
+
+        .chat-send-btn {
+            background: #16a34a;
+            font-size: 13px;
+            padding: 8px 10px;
+        }
+
+        .chat-send-btn:hover {
+            background: #15803d;
+        }
+
+        .chat-attach {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            background: #020617;
+            color: #e5e7eb;
+        }
+
+        .chat-attach:hover {
+            background: #111827;
+        }
+
+        .chat-note {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .msg {
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+
+        .msg-you {
+            text-align: right;
+        }
+
+        .msg-author {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .msg-bubble {
+            display: inline-block;
+            margin-top: 1px;
+            padding: 6px 9px;
+            border-radius: 9px;
+            background: #111827;
+        }
+
+        .msg-you .msg-bubble {
+            background: #1d4ed8;
+        }
+
+        /* fullscreen только для правого (ученик) окна */
+        #remoteViewportTeacher:fullscreen {
+            background: #000;
+            max-width: none;
+            width: 100%;
+            height: 100%;
+        }
+        #remoteViewportTeacher:fullscreen video {
+            object-fit: contain;
+        }
+
+        @media (max-width: 980px) {
+            .container {
+                width: 100%;
+                margin: 6px;
+                padding: 14px;
+            }
+            .top-row {
+                flex-direction: column;
+            }
+            .bottom-row {
+                grid-template-columns: 1fr;
+            }
+            .viewport {
+                max-width: 260px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="top-row">
+        <div class="link-block">
+            <div class="link-header">
+                <div class="link-title">Ссылка для ученика</div>
+                <button id="toggleLink" class="link-toggle">Свернуть</button>
+            </div>
+            <div id="roomInfo" class="room-label"></div>
+            <div id="linkContent" class="link-content">
+                <div class="link-input-row">
+                    <input id="lessonLink" type="text" readonly>
+                    <button id="copyBtn" class="btn">Скопировать</button>
+                </div>
+                <div class="hint">Скопируйте ссылку и отправьте её ученику в любой мессенджер.</div>
+            </div>
+        </div>
+        <div class="teacher-info">
+            <div><b>Учитель:</b> <span id="teacherNameLabel">—</span></div>
+            <div><b>Комната:</b> <span id="roomShort">—</span></div>
+            <div style="margin-top:6px;">
+                Слева — ваше видео, справа — окно ученика. В центре — чат урока.
+                Позже сюда добавим общее видео-соединение.
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-row">
+        <!-- ЛЕВАЯ КОЛОНКА: УЧИТЕЛЬ -->
+        <div class="video-column">
+            <div class="video-title">Вы (учитель)</div>
+            <div class="video-sub">Камера и микрофон вашего устройства</div>
+            <div class="viewport" id="localViewportTeacher">
+                <video id="localVideoTeacher" autoplay playsinline muted></video>
+                <div class="video-toolbar">
+                    <button id="selfMuteTeacher" class="icon-btn" title="Вкл/выкл микрофон">🎤</button>
+                </div>
+                <div class="video-placeholder" id="localPlaceholderTeacher">
+                    <div>Включаем камеру...</div>
+                    <div style="font-size:11px;">Разрешите доступ к камере и микрофону в браузере.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ЦЕНТР: ЧАТ -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-title">Чат урока</div>
+                <div class="chat-status">Пока сообщения видите только вы</div>
+            </div>
+            <div id="chatMessagesTeacher" class="chat-messages">
+                <div class="chat-empty">Сообщений пока нет. Напишите что-нибудь ученику.</div>
+            </div>
+            <div class="chat-input-row">
+                <label class="chat-attach" title="Прикрепить файл">
+                    📎
+                    <input type="file" id="chatFileTeacher" style="display:none;">
+                </label>
+                <input id="chatInputTeacher" type="text" placeholder="Напишите сообщение...">
+                <button id="chatSendTeacher" class="btn chat-send-btn">Отправить</button>
+            </div>
+            <div class="chat-note">
+                Прикрепление файлов до 10 МБ (PDF, изображения). Сейчас это демо без реальной отправки.
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: УЧЕНИК -->
+        <div class="video-column">
+            <div class="video-title">Окно ученика</div>
+            <div class="video-sub">Когда ученик подключится, здесь появится его видео</div>
+            <div class="viewport" id="remoteViewportTeacher">
+                <video id="remoteVideoTeacher" autoplay playsinline muted></video>
+                <div class="video-toolbar">
+                    <button id="remoteFullscreenTeacher" class="icon-btn" title="На весь экран">⤢</button>
+                    <button id="remoteMuteTeacher" class="icon-btn" title="Вкл/выкл звук">🔇</button>
+                </div>
+                <div class="video-placeholder" id="remotePlaceholderTeacher">
+                    <div>Окно ученика</div>
+                    <b id="remoteNameLabel">Ученик</b>
+                    <div>Когда ученик подключится, здесь появится его видео.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room") || "demo-room";
+const name = params.get("name") || "Учитель";
+
+const studentLink = `${window.location.origin}/student.html?room=${encodeURIComponent(room)}&teacher=${encodeURIComponent(name)}`;
+
+// ===== ССЫЛКА ДЛЯ УЧЕНИКА / ШАПКА =====
+const lessonLinkInput = document.getElementById("lessonLink");
+const copyBtn = document.getElementById("copyBtn");
+const roomInfoEl = document.getElementById("roomInfo");
+const teacherNameLabel = document.getElementById("teacherNameLabel");
+const roomShort = document.getElementById("roomShort");
+const remoteNameLabel = document.getElementById("remoteNameLabel");
+
+if (lessonLinkInput) lessonLinkInput.value = studentLink;
+if (roomInfoEl) roomInfoEl.textContent = "Комната: " + room;
+if (teacherNameLabel) teacherNameLabel.textContent = name;
+if (roomShort) roomShort.textContent = room;
+if (remoteNameLabel) remoteNameLabel.textContent = "Ученик";
+
+if (copyBtn) {
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(studentLink).then(() => {
+      copyBtn.textContent = "Скопировано ✓";
+      copyBtn.style.backgroundColor = "#22c55e";
+      setTimeout(() => {
+        copyBtn.textContent = "Скопировать";
+        copyBtn.style.backgroundColor = "#4f46e5";
+      }, 2000);
+    });
+  });
+}
+
+const toggleBtn = document.getElementById("toggleLink");
+const linkContent = document.getElementById("linkContent");
+if (toggleBtn && linkContent) {
+  toggleBtn.addEventListener("click", () => {
+    linkContent.classList.toggle("hidden");
+    toggleBtn.textContent = linkContent.classList.contains("hidden") ? "Показать" : "Свернуть";
+  });
+}
+
+// ===== ЧАТ УЧИТЕЛЯ (демо локальный) =====
+const chatMessagesT = document.getElementById("chatMessagesTeacher");
+const chatInputT = document.getElementById("chatInputTeacher");
+const chatSendT = document.getElementById("chatSendTeacher");
+const chatFileT = document.getElementById("chatFileTeacher");
+
+function addTeacherMessage(text, isFile = false) {
+  if (!text || !text.trim() || !chatMessagesT) return;
+  const empty = chatMessagesT.querySelector(".chat-empty");
+  if (empty) empty.remove();
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg msg-you";
+
+  const author = document.createElement("div");
+  author.className = "msg-author";
+  author.textContent = isFile ? "Файл (демо)" : "Вы";
+
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble";
+  bubble.textContent = text;
+
+  wrapper.appendChild(author);
+  wrapper.appendChild(bubble);
+  chatMessagesT.appendChild(wrapper);
+  chatMessagesT.scrollTop = chatMessagesT.scrollHeight;
+}
+
+if (chatSendT && chatInputT) {
+  chatSendT.addEventListener("click", () => {
+    addTeacherMessage(chatInputT.value);
+    chatInputT.value = "";
+    chatInputT.focus();
+  });
+
+  chatInputT.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTeacherMessage(chatInputT.value);
+      chatInputT.value = "";
+    }
+  });
+}
+
+if (chatFileT) {
+  chatFileT.addEventListener("change", () => {
+    if (!chatFileT.files || chatFileT.files.length === 0) return;
+    const file = chatFileT.files[0];
+    addTeacherMessage(`Файл: ${file.name} (до 10 МБ, демо)`, true);
+    chatFileT.value = "";
+  });
+}
+
+// ===== ЛОКАЛЬНОЕ ВИДЕО УЧИТЕЛЯ =====
+let localStreamTeacher = null;
+let isMicMutedTeacher = false;
+
+async function startLocalVideoTeacher() {
+  const video = document.getElementById("localVideoTeacher");
+  const placeholder = document.getElementById("localPlaceholderTeacher");
+  if (!video) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localStreamTeacher = stream;
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+    if (placeholder) placeholder.style.display = "none";
+    tryStartOffer(); // попробуем стартовать WebRTC, если всё готово
+  } catch (err) {
+    console.error("Ошибка доступа к камере учителя:", err);
+    if (placeholder) {
+      placeholder.innerHTML = "<div>Не удалось включить камеру.</div><div style='font-size:11px;'>Проверьте разрешения браузера.</div>";
+    }
+  }
+}
+
+function toggleTeacherMic() {
+  if (!localStreamTeacher) return;
+  isMicMutedTeacher = !isMicMutedTeacher;
+  localStreamTeacher.getAudioTracks().forEach(t => t.enabled = !isMicMutedTeacher);
+  const btn = document.getElementById("selfMuteTeacher");
+  if (btn) btn.textContent = isMicMutedTeacher ? "🎤✕" : "🎤";
+}
+
+// ===== ДИСТАНЦИОННОЕ ВИДЕО УЧЕНИКА (звук + fullscreen) =====
+let isRemoteMutedTeacher = true;
+
+function toggleRemoteMuteTeacher() {
+  const video = document.getElementById("remoteVideoTeacher");
+  if (!video) return;
+  isRemoteMutedTeacher = !isRemoteMutedTeacher;
+  video.muted = isRemoteMutedTeacher;
+  const btn = document.getElementById("remoteMuteTeacher");
+  if (btn) btn.textContent = isRemoteMutedTeacher ? "🔇" : "🔊";
+}
+
+function toggleFullscreen(el, btn) {
+  if (!el) return;
+  if (!document.fullscreenElement) {
+    if (el.requestFullscreen) {
+      el.requestFullscreen();
+      if (btn) btn.textContent = "⤡";
+    }
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+document.addEventListener("fullscreenchange", () => {
+  const btn = document.getElementById("remoteFullscreenTeacher");
+  if (!btn) return;
+  if (!document.fullscreenElement) {
+    btn.textContent = "⤢";
+  }
+});
+
+// ===== WebRTC + WebSocket сигналинг (учитель инициатор) =====
+let wsTeacher = null;
+let pcTeacher = null;
+let wsReady = false;
+let bothReady = false;
+let offerSent = false;
+
+function createWebSocketTeacher() {
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  const wsUrl = `${proto}://${window.location.host}/ws?room=${encodeURIComponent(room)}&role=teacher`;
+  wsTeacher = new WebSocket(wsUrl);
+
+  wsTeacher.onopen = () => {
+    wsReady = true;
+    console.log("[teacher] WebSocket открыт");
+    // сервер сам пришлёт both-ready, когда подключится ученик
+  };
+
+  wsTeacher.onmessage = async (event) => {
+    const msg = JSON.parse(event.data || "{}");
+    const type = msg.type;
+    console.log("[teacher] WS message:", msg);
+
+    if (type === "both-ready") {
+      bothReady = true;
+      tryStartOffer();
+    } else if (type === "answer") {
+      if (!pcTeacher) return;
+      const desc = new RTCSessionDescription(msg.sdp);
+      await pcTeacher.setRemoteDescription(desc);
+      console.log("[teacher] Установлен remote answer");
+    } else if (type === "ice-candidate") {
+      if (!pcTeacher || !msg.candidate) return;
+      try {
+        await pcTeacher.addIceCandidate(msg.candidate);
+      } catch (e) {
+        console.warn("Ошибка addIceCandidate (teacher):", e);
+      }
+    }
+  };
+
+  wsTeacher.onclose = () => {
+    console.log("[teacher] WebSocket закрыт");
+    wsReady = false;
+  };
+
+  wsTeacher.onerror = (e) => {
+    console.error("[teacher] WebSocket error:", e);
+  };
+}
+
+function ensurePeerConnectionTeacher() {
+  if (pcTeacher) return pcTeacher;
+
+  pcTeacher = new RTCPeerConnection({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" }
+    ]
+  });
+
+  if (localStreamTeacher) {
+    localStreamTeacher.getTracks().forEach(track => {
+      pcTeacher.addTrack(track, localStreamTeacher);
+    });
+  }
+
+  pcTeacher.onicecandidate = (event) => {
+    if (event.candidate && wsTeacher && wsTeacher.readyState === WebSocket.OPEN) {
+      wsTeacher.send(JSON.stringify({
+        type: "ice-candidate",
+        candidate: event.candidate
+      }));
+    }
+  };
+
+  pcTeacher.ontrack = (event) => {
+    const remoteVideo = document.getElementById("remoteVideoTeacher");
+    const placeholder = document.getElementById("remotePlaceholderTeacher");
+    if (remoteVideo && !remoteVideo.srcObject) {
+      remoteVideo.srcObject = event.streams[0];
+      remoteVideo.playsInline = true;
+      remoteVideo.muted = isRemoteMutedTeacher; // по умолчанию звук выкл
+    }
+    if (placeholder) placeholder.style.display = "none";
+  };
+
+  return pcTeacher;
+}
+
+async function tryStartOffer() {
+  if (offerSent) return;
+  if (!wsReady || !bothReady || !localStreamTeacher) {
+    return;
+  }
+  const pc = ensurePeerConnectionTeacher();
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    if (wsTeacher && wsTeacher.readyState === WebSocket.OPEN) {
+      wsTeacher.send(JSON.stringify({
+        type: "offer",
+        sdp: offer
+      }));
+      offerSent = true;
+      console.log("[teacher] Отправлен offer");
+    }
+  } catch (err) {
+    console.error("[teacher] Ошибка при создании offer:", err);
+  }
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ =====
+window.addEventListener("DOMContentLoaded", () => {
+  startLocalVideoTeacher();
+  createWebSocketTeacher();
+
+  const micBtn = document.getElementById("selfMuteTeacher");
+  if (micBtn) micBtn.addEventListener("click", toggleTeacherMic);
+
+  const remoteMuteBtn = document.getElementById("remoteMuteTeacher");
+  if (remoteMuteBtn) remoteMuteBtn.addEventListener("click", toggleRemoteMuteTeacher);
+
+  const fsBtn = document.getElementById("remoteFullscreenTeacher");
+  const remoteViewport = document.getElementById("remoteViewportTeacher");
+  if (fsBtn && remoteViewport) {
+    fsBtn.addEventListener("click", () => toggleFullscreen(remoteViewport, fsBtn));
+  }
+});
+
+</script>
+</body>
+</html>
