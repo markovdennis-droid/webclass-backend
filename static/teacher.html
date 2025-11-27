@@ -1,1 +1,310 @@
-<!doctype html><html><body>teacher placeholder</body></html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>WebClass — Учитель</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #002040, #000814 80%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      font-size: 22px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .top-box {
+      margin-bottom: 20px;
+    }
+
+    #student-link {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    button {
+      background: #18c964;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #000;
+      margin-top: 8px;
+    }
+
+    .container {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .column {
+      width: 28vw;
+      min-width: 300px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 15px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .video-box {
+      width: 100%;
+      aspect-ratio: 9/16;
+      background: #000;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .chat {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .messages {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border-radius: 14px;
+      padding: 10px;
+      margin-bottom: 10px;
+      overflow-y: auto;
+      font-size: 15px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="top-box">
+    <h2>Ссылка для ученика</h2>
+    <input id="student-link" readonly>
+    <button onclick="copyStudentLink()">Скопировать</button>
+  </div>
+
+  <div class="container">
+
+    <!-- Учитель -->
+    <div class="column">
+      <h2>Вы (учитель)</h2>
+      <div class="video-box">
+        <video id="teacherVideo" autoplay muted playsinline></video>
+      </div>
+    </div>
+
+    <!-- Чат -->
+    <div class="column">
+      <h2>Чат урока</h2>
+      <div class="chat">
+        <div id="messages" class="messages">Пока сообщений нет.</div>
+        <div class="input-row">
+          <input id="msgInput" type="text" placeholder="Введите сообщение...">
+          <button onclick="sendMessage()">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ученик -->
+    <div class="column">
+      <h2>Ученик</h2>
+      <div class="video-box">
+        <video id="studentVideo" autoplay playsinline></video>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+
+///////////////////////////////////////////////////////////////////////////////
+//  1. ПАРАМЕТРЫ И ССЫЛКА УЧЕНИКА (исправлено: всегда берём текущий домен)
+///////////////////////////////////////////////////////////////////////////////
+
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room") || "room1";
+const teacherName = params.get("name") || "Учитель";
+
+// ВСЕГДА создаём ссылку на этом же домене
+function updateStudentLink() {
+  const origin = window.location.origin;
+  const link = `${origin}/student?room=${encodeURIComponent(room)}&teacher=${encodeURIComponent(teacherName)}`;
+  document.getElementById("student-link").value = link;
+}
+
+function copyStudentLink() {
+  const inp = document.getElementById("student-link");
+  inp.select();
+  inp.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(inp.value);
+  alert("Ссылка скопирована!");
+}
+
+updateStudentLink();
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  2. ВИДЕО ЛОКАЛЬНОЕ УЧИТЕЛЯ
+///////////////////////////////////////////////////////////////////////////////
+
+let localStream = null;
+const teacherVideo = document.getElementById("teacherVideo");
+
+async function startLocalVideo() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+    teacherVideo.srcObject = localStream;
+  } catch (err) {
+    alert("Нет доступа к камере/микрофону");
+    console.error(err);
+  }
+}
+
+startLocalVideo();
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  3. WebSocket + WebRTC
+///////////////////////////////////////////////////////////////////////////////
+
+const wsProto = location.protocol === "https:" ? "wss" : "ws";
+const wsURL = `${wsProto}://${location.host}/ws?room=${encodeURIComponent(room)}&role=teacher`;
+const ws = new WebSocket(wsURL);
+
+let pc = null;
+const studentVideo = document.getElementById("studentVideo");
+
+function createPeerConnection() {
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  });
+
+  // локальные треки -> к ученику
+  localStream.getTracks().forEach(track => {
+    pc.addTrack(track, localStream);
+  });
+
+  // удалённое видео ученика
+  pc.ontrack = (event) => {
+    studentVideo.srcObject = event.streams[0];
+  };
+
+  // пересылка ICE кандидатов
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      ws.send(JSON.stringify({
+        type: "ice-candidate",
+        candidate: event.candidate
+      }));
+    }
+  };
+}
+
+ws.onmessage = async (ev) => {
+  const msg = JSON.parse(ev.data);
+
+  if (msg.type === "both-ready") {
+    // начинаем соединение
+    createPeerConnection();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    ws.send(JSON.stringify({
+      type: "offer",
+      sdp: pc.localDescription
+    }));
+  }
+
+  if (msg.type === "answer") {
+    const remoteDesc = new RTCSessionDescription(msg.sdp);
+    await pc.setRemoteDescription(remoteDesc);
+  }
+
+  if (msg.type === "ice-candidate") {
+    if (msg.candidate && pc) {
+      try {
+        await pc.addIceCandidate(msg.candidate);
+      } catch (err) {
+        console.error("ICE error", err);
+      }
+    }
+  }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  4. ЧАТ
+///////////////////////////////////////////////////////////////////////////////
+
+function sendMessage() {
+  const box = document.getElementById("msgInput");
+  const msg = box.value.trim();
+  if (!msg) return;
+
+  const container = document.getElementById("messages");
+  if (container.textContent === "Пока сообщений нет.") container.innerHTML = "";
+
+  const div = document.createElement("div");
+  div.textContent = "Вы: " + msg;
+  container.appendChild(div);
+
+  box.value = "";
+}
+
+</script>
+
+</body>
+</html>
