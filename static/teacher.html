@@ -387,4 +387,20 @@ function sendMessage() {
 </script>
 
 </body>
+  <div class="top-panel">
+  <div class="top-panel__info">
+    <div><strong>Комната:</strong> <span id="roomNameLabel"></span></div>
+    <div><strong>Учитель:</strong> <span id="teacherNameLabel"></span></div>
+  </div>
+
+  <div class="top-panel__link">
+    <label for="studentLink"><strong>Ссылка для ученика</strong></label>
+    <div class="top-panel__link-row">
+      <input id="studentLink" type="text" readonly />
+      <button id="copyStudentLinkBtn">Скопировать</button>
+    </div>
+    <small>Скопируйте ссылку и отправьте её ученику.</small>
+  </div>
+</div>
+
 </html>
