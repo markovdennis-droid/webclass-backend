@@ -19,37 +19,53 @@
       padding: 20px;
     }
 
-    h2 {
-      margin-bottom: 10px;
-      font-size: 22px;
+    h1, h2 {
       font-weight: 600;
-      text-align: center;
     }
 
-    .top-box {
-      margin-bottom: 20px;
+    .top-card {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .top-card-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+
+    .link-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
     #student-link {
-      width: 100%;
-      padding: 10px;
+      flex: 1;
+      padding: 8px 10px;
       border-radius: 8px;
       border: none;
       outline: none;
-      font-size: 14px;
-      margin-top: 6px;
+      font-size: 13px;
     }
 
-    button {
+    .btn {
       background: #18c964;
       border: none;
-      padding: 10px 14px;
+      padding: 8px 14px;
       border-radius: 10px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       color: #000;
-      margin-top: 8px;
+      white-space: nowrap;
     }
 
     .container {
@@ -70,12 +86,19 @@
       box-shadow: 0 8px 30px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .column h2 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 4px;
     }
 
     .video-box {
       width: 100%;
-      aspect-ratio: 9/16;
+      aspect-ratio: 9 / 16;
       background: #000;
       border-radius: 14px;
       overflow: hidden;
@@ -91,12 +114,34 @@
       object-fit: cover;
     }
 
+    .video-controls {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+    }
+
     .chat {
       width: 100%;
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      gap: 8px;
     }
 
     .messages {
@@ -104,7 +149,6 @@
       background: rgba(255,255,255,0.03);
       border-radius: 14px;
       padding: 10px;
-      margin-bottom: 10px;
       overflow-y: auto;
       font-size: 15px;
     }
@@ -112,6 +156,7 @@
     .input-row {
       display: flex;
       gap: 10px;
+      align-items: center;
     }
 
     input[type="text"] {
@@ -122,15 +167,29 @@
       outline: none;
       font-size: 15px;
     }
+
+    .attachments-hint {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
   </style>
 </head>
 
 <body>
 
-  <div class="top-box">
-    <h2>Ссылка для ученика</h2>
-    <input id="student-link" readonly>
-    <button onclick="copyStudentLink()">Скопировать</button>
+  <div class="top-card">
+    <div class="top-card-row">
+      <div><strong>Учитель:</strong> <span id="teacherNameLabel"></span></div>
+      <div><strong>Комната:</strong> <span id="roomLabel"></span></div>
+    </div>
+    <div class="link-row">
+      <input id="student-link" readonly>
+      <button class="btn" onclick="copyStudentLink()">Скопировать</button>
+    </div>
+    <div style="font-size: 12px; opacity: 0.8;">
+      Скопируйте ссылку и отправьте ученику в любой мессенджер.
+    </div>
   </div>
 
   <div class="container">
@@ -138,8 +197,12 @@
     <!-- Учитель -->
     <div class="column">
       <h2>Вы (учитель)</h2>
-      <div class="video-box">
+      <div id="teacherBox" class="video-box">
         <video id="teacherVideo" autoplay muted playsinline></video>
+        <div class="video-controls">
+          <button class="icon-btn" id="teacherMuteBtn" title="Выкл/вкл микрофон">🔇</button>
+          <button class="icon-btn" title="На весь экран" onclick="toggleFullscreen('teacherBox')">⛶</button>
+        </div>
       </div>
     </div>
 
@@ -150,7 +213,10 @@
         <div id="messages" class="messages">Пока сообщений нет.</div>
         <div class="input-row">
           <input id="msgInput" type="text" placeholder="Введите сообщение...">
-          <button onclick="sendMessage()">OK</button>
+          <button class="btn" onclick="sendMessage()">OK</button>
+        </div>
+        <div class="attachments-hint">
+          Прикрепление файлов до 10 МБ (PDF, изображения). Сейчас это демо без реальной отправки.
         </div>
       </div>
     </div>
@@ -158,47 +224,54 @@
     <!-- Ученик -->
     <div class="column">
       <h2>Ученик</h2>
-      <div class="video-box">
+      <div id="studentBox" class="video-box">
         <video id="studentVideo" autoplay playsinline></video>
+        <div class="video-controls">
+          <button class="icon-btn" id="studentMuteBtn" title="Выкл/вкл звук ученика">🔈</button>
+          <button class="icon-btn" title="На весь экран" onclick="toggleFullscreen('studentBox')">⛶</button>
+        </div>
       </div>
     </div>
 
   </div>
 
 <script>
-
-///////////////////////////////////////////////////////////////////////////////
-//  1. ПАРАМЕТРЫ И ССЫЛКА УЧЕНИКА (исправлено: всегда берём текущий домен)
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ПАРАМЕТРЫ URL
+////////////////////////////////////////////////////////////////////////////////
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "room1";
 const teacherName = params.get("name") || "Учитель";
 
-// ВСЕГДА создаём ссылку на этом же домене
+document.getElementById("teacherNameLabel").textContent = teacherName;
+document.getElementById("roomLabel").textContent = room;
+
+// Ссылка для ученика — всегда на том же домене
 function updateStudentLink() {
   const origin = window.location.origin;
   const link = `${origin}/student?room=${encodeURIComponent(room)}&teacher=${encodeURIComponent(teacherName)}`;
   document.getElementById("student-link").value = link;
 }
+updateStudentLink();
 
 function copyStudentLink() {
   const inp = document.getElementById("student-link");
   inp.select();
   inp.setSelectionRange(0, 99999);
-  navigator.clipboard.writeText(inp.value);
-  alert("Ссылка скопирована!");
+  navigator.clipboard.writeText(inp.value).then(() => {
+    alert("Ссылка скопирована!");
+  }).catch(() => {
+    alert("Не удалось скопировать ссылку.");
+  });
 }
 
-updateStudentLink();
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  2. ВИДЕО ЛОКАЛЬНОЕ УЧИТЕЛЯ
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ЛОКАЛЬНОЕ ВИДЕО УЧИТЕЛЯ
+////////////////////////////////////////////////////////////////////////////////
 let localStream = null;
 const teacherVideo = document.getElementById("teacherVideo");
+const teacherMuteBtn = document.getElementById("teacherMuteBtn");
+let teacherMuted = false;
 
 async function startLocalVideo() {
   try {
@@ -208,18 +281,32 @@ async function startLocalVideo() {
     });
     teacherVideo.srcObject = localStream;
   } catch (err) {
-    alert("Нет доступа к камере/микрофону");
     console.error(err);
+    alert("Нет доступа к камере/микрофону");
+  }
+}
+startLocalVideo();
+
+teacherMuteBtn.addEventListener("click", () => {
+  if (!localStream) return;
+  teacherMuted = !teacherMuted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !teacherMuted);
+  teacherMuteBtn.textContent = teacherMuted ? "🔈" : "🔇";
+});
+
+function toggleFullscreen(boxId) {
+  const el = document.getElementById(boxId);
+  if (!el) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    el.requestFullscreen().catch(() => {});
   }
 }
 
-startLocalVideo();
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  3. WebSocket + WebRTC
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// WebRTC + WebSocket
+////////////////////////////////////////////////////////////////////////////////
 const wsProto = location.protocol === "https:" ? "wss" : "ws";
 const wsURL = `${wsProto}://${location.host}/ws?room=${encodeURIComponent(room)}&role=teacher`;
 const ws = new WebSocket(wsURL);
@@ -232,17 +319,16 @@ function createPeerConnection() {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  // локальные треки -> к ученику
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+  }
 
-  // удалённое видео ученика
   pc.ontrack = (event) => {
     studentVideo.srcObject = event.streams[0];
   };
 
-  // пересылка ICE кандидатов
   pc.onicecandidate = (event) => {
     if (event.candidate) {
       ws.send(JSON.stringify({
@@ -257,8 +343,7 @@ ws.onmessage = async (ev) => {
   const msg = JSON.parse(ev.data);
 
   if (msg.type === "both-ready") {
-    // начинаем соединение
-    createPeerConnection();
+    if (!pc) createPeerConnection();
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
@@ -268,42 +353,37 @@ ws.onmessage = async (ev) => {
     }));
   }
 
-  if (msg.type === "answer") {
+  if (msg.type === "answer" && pc) {
     const remoteDesc = new RTCSessionDescription(msg.sdp);
     await pc.setRemoteDescription(remoteDesc);
   }
 
-  if (msg.type === "ice-candidate") {
-    if (msg.candidate && pc) {
-      try {
-        await pc.addIceCandidate(msg.candidate);
-      } catch (err) {
-        console.error("ICE error", err);
-      }
+  if (msg.type === "ice-candidate" && pc && msg.candidate) {
+    try {
+      await pc.addIceCandidate(msg.candidate);
+    } catch (err) {
+      console.error("ICE error", err);
     }
   }
 };
 
-
-///////////////////////////////////////////////////////////////////////////////
-//  4. ЧАТ
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ЧАТ (пока только локальный UI)
+////////////////////////////////////////////////////////////////////////////////
 function sendMessage() {
   const box = document.getElementById("msgInput");
-  const msg = box.value.trim();
-  if (!msg) return;
+  const text = box.value.trim();
+  if (!text) return;
 
   const container = document.getElementById("messages");
   if (container.textContent === "Пока сообщений нет.") container.innerHTML = "";
 
   const div = document.createElement("div");
-  div.textContent = "Вы: " + msg;
+  div.textContent = "Вы: " + text;
   container.appendChild(div);
 
   box.value = "";
 }
-
 </script>
 
 </body>
