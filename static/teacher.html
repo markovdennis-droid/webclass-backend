@@ -1,42 +1,65 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <title>Учитель — WebClass</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
-  background:#0b1220; color:#fff; font-family:-apple-system,Roboto,sans-serif;
-  padding:20px;
+  background: #0b1220;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  padding: 20px;
 }
-h2 { margin-bottom:10px; }
-.wrapper{
-  display:flex; gap:20px;
+
+h2 { margin-bottom: 10px; }
+
+.wrapper {
+  display: flex;
+  gap: 20px;
 }
-.col{
-  flex:1;
-  background:#131a2a;
-  padding:15px; border-radius:12px;
+
+.col {
+  flex: 1;
+  background: #131a2a;
+  padding: 15px;
+  border-radius: 12px;
 }
-video{
-  width:100%; background:#000; border-radius:10px;
+
+video {
+  width: 100%;
+  background: #000;
+  border-radius: 10px;
 }
-#chat{
-  height:400px; background:#0d1320; overflow-y:auto; padding:10px; border-radius:10px;
+
+#chat {
+  height: 380px;
+  background: #0d1320;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 10px;
 }
-input,button{
-  padding:10px; border-radius:8px; border:none; margin-top:5px;
+
+input, button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 5px;
 }
-button{ background:#32d27f; cursor:pointer; }
+
+button {
+  background: #32d27f;
+  cursor: pointer;
+}
 </style>
 </head>
+
 <body>
 <h2>Учитель</h2>
 
 <div>Ссылка ученика:</div>
 <input id="studentLink" style="width:100%;">
-
 <button onclick="copyLink()">Скопировать</button>
 
 <div class="wrapper">
@@ -57,61 +80,70 @@ button{ background:#32d27f; cursor:pointer; }
   </div>
 </div>
 
-
 <script>
-const params=new URLSearchParams(location.search);
-const room=params.get("room")||"room1";
-const name=params.get("name")||"Учитель";
+const params = new URLSearchParams(location.search);
+const room   = params.get("room")  || "room1";
+const name   = params.get("name")  || "Учитель";
 
-document.getElementById("studentLink").value=
-  window.location.origin + "/static/student.html?room="+encodeURIComponent(room)+"&teacher="+encodeURIComponent(name);
+document.getElementById("studentLink").value =
+  window.location.origin + "/static/student.html?room=" +
+  encodeURIComponent(room) + "&teacher=" + encodeURIComponent(name);
 
-function copyLink(){
+function copyLink() {
   navigator.clipboard.writeText(document.getElementById("studentLink").value);
 }
 
-const ws=new WebSocket("wss://webclass-backend-g3uh.onrender.com/ws?room="+room+"&role=teacher");
+const wsURL = "wss://" + window.location.host + "/ws?room=" + room + "&role=teacher";
+const ws = new WebSocket(wsURL);
 
 let pc = new RTCPeerConnection({
- iceServers:[
-  {urls:"stun:stun.l.google.com:19302"},
-  {urls:"turn:relay1.expressturn.com:3478",username:"efM2MyWEnp5q7V6dQq",credential:"XqfK6n9oZp4X5eEt"}
+ iceServers: [
+   { urls: "stun:stun.l.google.com:19302" },
+   {
+     urls: "turn:global.turn.twilio.com:3478?transport=tcp",
+     username: "demo",
+     credential: "demo"
+   }
  ]
 });
 
-pc.onicecandidate=e=>{ if(e.candidate) ws.send(JSON.stringify({type:"ice",candidate:e.candidate})); };
-pc.ontrack=e=>{ document.getElementById("remote").srcObject=e.streams[0]; };
-
-(async()=>{
-  let stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-  document.getElementById("local").srcObject=stream;
-  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
-})();
-
-ws.onmessage=async(e)=>{
- let msg=JSON.parse(e.data);
-
- if(msg.chat){
-   let ch=document.getElementById("chat");
-   ch.innerHTML+="<div><b>Ученик:</b> "+msg.chat+"</div>";
- }
-
- if(msg.type==="offer"){
-   await pc.setRemoteDescription(msg);
-   let ans=await pc.createAnswer();
-   await pc.setLocalDescription(ans);
-   ws.send(JSON.stringify(ans));
- }
-
- if(msg.type==="ice") pc.addIceCandidate(msg.candidate);
+pc.onicecandidate = e => {
+  if (e.candidate) ws.send(JSON.stringify({ type: "ice", candidate: e.candidate }));
 };
 
-function sendMsg(){
- let m=document.getElementById("msg").value;
- ws.send(JSON.stringify({chat:m}));
- let ch=document.getElementById("chat");
- ch.innerHTML+="<div><b>Вы:</b> "+m+"</div>";
- document.getElementById("msg").value="";
+pc.ontrack = e => {
+  document.getElementById("remote").srcObject = e.streams[0];
+};
+
+(async () => {
+  let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  document.getElementById("local").srcObject = stream;
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+})();
+
+ws.onmessage = async e => {
+  let msg = JSON.parse(e.data);
+
+  if (msg.chat) {
+    chat.innerHTML += `<div><b>Ученик:</b> ${msg.chat}</div>`;
+  }
+
+  if (msg.type === "offer") {
+    await pc.setRemoteDescription(msg);
+    let ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    ws.send(JSON.stringify(ans));
+  }
+
+  if (msg.type === "ice")
+    pc.addIceCandidate(msg.candidate);
+};
+
+function sendMsg() {
+  let m = msg.value;
+  ws.send(JSON.stringify({ chat: m }));
+  chat.innerHTML += `<div><b>Вы:</b> ${m}</div>`;
+  msg.value = "";
 }
 </script>
 
