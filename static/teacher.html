@@ -308,7 +308,7 @@ function toggleFullscreen(boxId) {
 // WebRTC + WebSocket
 ////////////////////////////////////////////////////////////////////////////////
 const wsProto = location.protocol === "https:" ? "wss" : "ws";
-const wsURL = `${wsProto}://${location.host}/ws?room=${encodeURIComponent(room)}&role=teacher`;
+const wsURL = "wss://webclass-backend-g3uh.onrender.com/ws";
 const ws = new WebSocket(wsURL);
 
 let pc = null;
