@@ -1,12 +1,12 @@
-import json
-from typing import Dict, Optional
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from typing import Optional, Dict
 
 app = FastAPI()
 
+# --- CORS (на один домен можно оставить *, ошибок не будет)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,9 +15,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Монтируем папку /static
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# --- Маршруты для teacher и student
+@app.get("/teacher")
+async def serve_teacher():
+    return FileResponse("static/teacher.html")
+
+@app.get("/student")
+async def serve_student():
+    return FileResponse("static/student.html")
+
+
+# --- Класс комнаты
 class Room:
-    def __init__(self) -> None:
+    def __init__(self):
         self.teacher: Optional[WebSocket] = None
         self.student: Optional[WebSocket] = None
 
@@ -25,79 +38,56 @@ class Room:
 rooms: Dict[str, Room] = {}
 
 
-async def safe_send(ws: Optional[WebSocket], data: str) -> None:
-    if not ws:
-        return
-    try:
-        await ws.send_text(data)
-    except Exception:
-        pass
-
-
-async def notify_both_ready(room_id: str) -> None:
-    room = rooms.get(room_id)
-    if not room:
-        return
-    if room.teacher and room.student:
-        msg = json.dumps({"type": "both-ready"})
-        await safe_send(room.teacher, msg)
-        await safe_send(room.student, msg)
+async def safe_send(ws: Optional[WebSocket], msg: str):
+    if ws:
+        try:
+            await ws.send_text(msg)
+        except:
+            pass
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    room: str = Query(...),
-    role: str = Query(...),
-):
-    await websocket.accept()
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
 
-    if room not in rooms:
-        rooms[room] = Room()
-    room_obj = rooms[room]
+    # Получаем параметры room & role
+    params = ws.query_params
+    room_id = params.get("room")
+    role = params.get("role")  # teacher | student
 
+    if not room_id or not role:
+        await ws.close()
+        return
+
+    if room_id not in rooms:
+        rooms[room_id] = Room()
+
+    room = rooms[room_id]
+
+    # Регистрируем сокет
     if role == "teacher":
-        room_obj.teacher = websocket
+        room.teacher = ws
+        # сообщаем студенту что учитель подключился
+        await safe_send(room.student, "teacher_connected")
     else:
-        role = "student"
-        room_obj.student = websocket
-
-    await notify_both_ready(room)
+        room.student = ws
+        # сообщаем учителю что студент подключился
+        await safe_send(room.teacher, "student_connected")
 
     try:
         while True:
-            data = await websocket.receive_text()
-            try:
-                msg = json.loads(data)
-            except json.JSONDecodeError:
-                continue
+            data = await ws.receive_text()
 
-            msg_type = msg.get("type")
-
-            if msg_type in ("offer", "answer", "ice-candidate"):
-                if role == "teacher":
-                    target_ws = room_obj.student
-                else:
-                    target_ws = room_obj.teacher
-
-                if target_ws is not None:
-                    await safe_send(target_ws, data)
+            # видео / rtc
+            if role == "teacher":
+                await safe_send(room.student, data)
+            else:
+                await safe_send(room.teacher, data)
 
     except WebSocketDisconnect:
-        if role == "teacher" and room_obj.teacher is websocket:
-            room_obj.teacher = None
-        elif role == "student" and room_obj.student is websocket:
-            room_obj.student = None
-
-        if room_obj.teacher is None and room_obj.student is None:
-            rooms.pop(room, None)
-
-
-@app.get("/teacher")
-async def serve_teacher():
-    return FileResponse("static/teacher.html")
-
-
-@app.get("/student")
-async def serve_student():
-    return FileResponse("static/student.html")
+        if role == "teacher":
+            room.teacher = None
+            await safe_send(room.student, "teacher_left")
+        else:
+            room.student = None
+            await safe_send(room.teacher, "student_left")
