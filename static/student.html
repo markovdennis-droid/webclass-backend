@@ -20,10 +20,16 @@
     }
 
     h2 {
-      margin-bottom: 10px;
-      font-size: 22px;
       font-weight: 600;
       text-align: center;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .top-info {
+      margin-bottom: 16px;
+      font-size: 14px;
+      opacity: 0.9;
     }
 
     .container {
@@ -44,12 +50,12 @@
       box-shadow: 0 8px 30px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
-      align-items: center;
+      gap: 10px;
     }
 
     .video-box {
       width: 100%;
-      aspect-ratio: 9/16;
+      aspect-ratio: 9 / 16;
       background: #000;
       border-radius: 14px;
       overflow: hidden;
@@ -65,12 +71,34 @@
       object-fit: cover;
     }
 
+    .video-controls {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+    }
+
     .chat {
       width: 100%;
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      gap: 8px;
     }
 
     .messages {
@@ -78,7 +106,6 @@
       background: rgba(255,255,255,0.03);
       border-radius: 14px;
       padding: 10px;
-      margin-bottom: 10px;
       overflow-y: auto;
       font-size: 15px;
     }
@@ -98,15 +125,20 @@
       font-size: 15px;
     }
 
-    button {
+    .btn {
       background: #18c964;
       border: none;
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 10px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       color: #000;
+    }
+
+    .attachments-hint {
+      font-size: 12px;
+      opacity: 0.7;
     }
 
   </style>
@@ -114,13 +146,22 @@
 
 <body>
 
+  <div class="top-info">
+    Комната: <strong id="roomLabel"></strong>,
+    учитель: <strong id="teacherLabel"></strong>
+  </div>
+
   <div class="container">
 
-    <!-- Ученик -->
+    <!-- Ученик локально -->
     <div class="column">
       <h2>Вы (ученик)</h2>
-      <div class="video-box">
+      <div id="studentBox" class="video-box">
         <video id="studentLocal" autoplay muted playsinline></video>
+        <div class="video-controls">
+          <button class="icon-btn" id="localMuteBtn" title="Выкл/вкл микрофон">🔇</button>
+          <button class="icon-btn" title="На весь экран" onclick="toggleFullscreen('studentBox')">⛶</button>
+        </div>
       </div>
     </div>
 
@@ -131,38 +172,46 @@
         <div id="messages" class="messages">Пока сообщений нет.</div>
         <div class="input-row">
           <input id="msgInput" type="text" placeholder="Введите сообщение...">
-          <button onclick="sendMessage()">OK</button>
+          <button class="btn" onclick="sendMessage()">OK</button>
+        </div>
+        <div class="attachments-hint">
+          Прикрепление файлов до 10 МБ (PDF, изображения). Сейчас это демо без реальной отправки.
         </div>
       </div>
     </div>
 
-    <!-- Учитель -->
+    <!-- Учитель удалённый -->
     <div class="column">
       <h2>Учитель</h2>
-      <div class="video-box">
+      <div id="teacherBox" class="video-box">
         <video id="teacherRemote" autoplay playsinline></video>
+        <div class="video-controls">
+          <button class="icon-btn" id="remoteMuteBtn" title="Выкл/вкл звук">🔈</button>
+          <button class="icon-btn" title="На весь экран" onclick="toggleFullscreen('teacherBox')">⛶</button>
+        </div>
       </div>
     </div>
 
   </div>
 
 <script>
-
-///////////////////////////////////////////////////////////////////////////////
-// 1. ПАРАМЕТРЫ
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ПАРАМЕТРЫ
+////////////////////////////////////////////////////////////////////////////////
 const params = new URLSearchParams(window.location.search);
 const room = params.get("room") || "room1";
 const teacherName = params.get("teacher") || "Учитель";
 
+document.getElementById("roomLabel").textContent = room;
+document.getElementById("teacherLabel").textContent = teacherName;
 
-///////////////////////////////////////////////////////////////////////////////
-// 2. ВИДЕО ЛОКАЛЬНОЕ УЧЕНИКА
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ЛОКАЛЬНОЕ ВИДЕО
+////////////////////////////////////////////////////////////////////////////////
 let localStream = null;
 const studentLocal = document.getElementById("studentLocal");
+const localMuteBtn = document.getElementById("localMuteBtn");
+let micMuted = false;
 
 async function startLocal() {
   try {
@@ -172,36 +221,59 @@ async function startLocal() {
     });
     studentLocal.srcObject = localStream;
   } catch (err) {
-    alert("Нет доступа к камере/микрофону");
     console.error(err);
+    alert("Нет доступа к камере/микрофону");
+  }
+}
+startLocal();
+
+localMuteBtn.addEventListener("click", () => {
+  if (!localStream) return;
+  micMuted = !micMuted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !micMuted);
+  localMuteBtn.textContent = micMuted ? "🔈" : "🔇";
+});
+
+function toggleFullscreen(boxId) {
+  const el = document.getElementById(boxId);
+  if (!el) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    el.requestFullscreen().catch(() => {});
   }
 }
 
-startLocal();
-
-
-///////////////////////////////////////////////////////////////////////////////
-// 3. WebSocket + WebRTC
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// WebRTC + WebSocket
+////////////////////////////////////////////////////////////////////////////////
 const wsProto = location.protocol === "https:" ? "wss" : "ws";
 const wsURL = `${wsProto}://${location.host}/ws?room=${encodeURIComponent(room)}&role=student`;
 const ws = new WebSocket(wsURL);
 
 let pc = null;
 const teacherRemote = document.getElementById("teacherRemote");
+const remoteMuteBtn = document.getElementById("remoteMuteBtn");
+let remoteMuted = false;
+
+remoteMuteBtn.addEventListener("click", () => {
+  if (!teacherRemote) return;
+  remoteMuted = !remoteMuted;
+  teacherRemote.muted = remoteMuted;
+  remoteMuteBtn.textContent = remoteMuted ? "🔇" : "🔈";
+});
 
 function createPeerConnection() {
   pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
   });
 
-  // локальные треки -> учителю
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+  }
 
-  // удалённый поток учителя
   pc.ontrack = (event) => {
     teacherRemote.srcObject = event.streams[0];
   };
@@ -216,12 +288,11 @@ function createPeerConnection() {
   };
 }
 
-
 ws.onmessage = async (ev) => {
   const msg = JSON.parse(ev.data);
 
   if (msg.type === "offer") {
-    createPeerConnection();
+    if (!pc) createPeerConnection();
 
     await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
     const answer = await pc.createAnswer();
@@ -233,37 +304,32 @@ ws.onmessage = async (ev) => {
     }));
   }
 
-  if (msg.type === "ice-candidate") {
-    if (pc && msg.candidate) {
-      try {
-        await pc.addIceCandidate(msg.candidate);
-      } catch (err) {
-        console.error("ICE error", err);
-      }
+  if (msg.type === "ice-candidate" && pc && msg.candidate) {
+    try {
+      await pc.addIceCandidate(msg.candidate);
+    } catch (err) {
+      console.error("ICE error", err);
     }
   }
 };
 
-
-///////////////////////////////////////////////////////////////////////////////
-// 4. ЧАТ
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////
+// ЧАТ (локальный UI)
+////////////////////////////////////////////////////////////////////////////////
 function sendMessage() {
   const box = document.getElementById("msgInput");
-  const msg = box.value.trim();
-  if (!msg) return;
+  const text = box.value.trim();
+  if (!text) return;
 
   const container = document.getElementById("messages");
   if (container.textContent === "Пока сообщений нет.") container.innerHTML = "";
 
   const div = document.createElement("div");
-  div.textContent = "Вы: " + msg;
+  div.textContent = "Вы: " + text;
   container.appendChild(div);
 
   box.value = "";
 }
-
 </script>
 
 </body>
