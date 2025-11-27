@@ -3,11 +3,10 @@ from typing import Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
 
-# CORS — при желании можно сузить до конкретного домена
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,7 +31,6 @@ async def safe_send(ws: Optional[WebSocket], data: str) -> None:
     try:
         await ws.send_text(data)
     except Exception:
-        # В проде тут логируем ошибку
         pass
 
 
@@ -52,26 +50,18 @@ async def websocket_endpoint(
     room: str = Query(...),
     role: str = Query(...),
 ):
-    """
-    WebSocket-сигналинг для WebRTC.
-    Подключение:
-      /ws?room=ROOM_ID&role=teacher
-      /ws?room=ROOM_ID&role=student
-    """
     await websocket.accept()
 
     if room not in rooms:
         rooms[room] = Room()
     room_obj = rooms[room]
 
-    # Регистрируем сокет
     if role == "teacher":
         room_obj.teacher = websocket
     else:
         role = "student"
         room_obj.student = websocket
 
-    # Если оба в комнате — шлём обоим "both-ready"
     await notify_both_ready(room)
 
     try:
@@ -84,7 +74,6 @@ async def websocket_endpoint(
 
             msg_type = msg.get("type")
 
-            # Пересылаем signaling-сообщения второй стороне
             if msg_type in ("offer", "answer", "ice-candidate"):
                 if role == "teacher":
                     target_ws = room_obj.student
@@ -95,17 +84,20 @@ async def websocket_endpoint(
                     await safe_send(target_ws, data)
 
     except WebSocketDisconnect:
-        # Клиент отвалился
         if role == "teacher" and room_obj.teacher is websocket:
             room_obj.teacher = None
         elif role == "student" and room_obj.student is websocket:
             room_obj.student = None
 
-        # Если в комнате никого не осталось — удаляем её
         if room_obj.teacher is None and room_obj.student is None:
             rooms.pop(room, None)
 
 
-# Монтируем статику В САМОМ КОНЦЕ,
-# чтобы /ws обрабатывался до StaticFiles
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+@app.get("/teacher")
+async def serve_teacher():
+    return FileResponse("static/teacher.html")
+
+
+@app.get("/student")
+async def serve_student():
+    return FileResponse("static/student.html")
