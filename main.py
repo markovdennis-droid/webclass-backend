@@ -16,10 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Статика: предполагается, что teacher.html и student.html лежат в папке "static"
-# Если у тебя уже есть другой mount — адаптируй этот блок под свой проект.
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
 
 class Room:
     def __init__(self) -> None:
@@ -90,7 +86,6 @@ async def websocket_endpoint(
 
             # Пересылаем signaling-сообщения второй стороне
             if msg_type in ("offer", "answer", "ice-candidate"):
-                target_ws: Optional[WebSocket]
                 if role == "teacher":
                     target_ws = room_obj.student
                 else:
@@ -109,3 +104,8 @@ async def websocket_endpoint(
         # Если в комнате никого не осталось — удаляем её
         if room_obj.teacher is None and room_obj.student is None:
             rooms.pop(room, None)
+
+
+# Монтируем статику В САМОМ КОНЦЕ,
+# чтобы /ws обрабатывался до StaticFiles
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
