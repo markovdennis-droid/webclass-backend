@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>WebClass — вход</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  background:#0b1220;
+  color:#fff;
+  font-family:-apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  padding:20px;
+}
+
+.card {
+  max-width:420px;
+  margin:auto;
+  background:#131a2a;
+  padding:20px;
+  border-radius:12px;
+}
+
+input,button {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin-top:10px;
+}
+
+button {
+  background:#32d27f;
+  color:#000;
+  font-weight:600;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+<h2>WebClass — вход</h2>
+
+<input id="name" placeholder="Ваше имя">
+<input id="room" placeholder="Комната" value="room1">
+
+<button onclick="goTeacher()">Войти как учитель</button>
+<button onclick="goStudent()">Войти как ученик</button>
+</div>
+
+<script>
+function goTeacher() {
+  const n = name.value.trim();
+  const r = room.value.trim();
+  if (!n || !r) return alert("Введите имя и комнату");
+  location = "/static/teacher.html?name=" +
+             encodeURIComponent(n) +
+             "&room=" +
+             encodeURIComponent(r);
+}
+
+function goStudent() {
+  const n = name.value.trim();
+  const r = room.value.trim();
+  if (!n || !r) return alert("Введите имя и комнату");
+  location = "/static/student.html?teacher=" +
+             encodeURIComponent(n) +
+             "&room=" +
+             encodeURIComponent(r);
+}
+</script>
+
+</body>
+</html>
