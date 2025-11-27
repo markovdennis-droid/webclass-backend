@@ -4,8 +4,8 @@ from starlette.websockets import WebSocketDisconnect
 
 app = FastAPI()
 
-# ВАЖНО: твоя статика лежит в ПАПКЕ main/static
-app.mount("/static", StaticFiles(directory="main/static"), name="static")
+# ТВОИ HTML лежат в ПАПКЕ static/, НЕ В main/static
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 rooms = {}
 
