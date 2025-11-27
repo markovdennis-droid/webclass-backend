@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 # --- Монтируем папку /static
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="main/static"), name="static")
 
 # --- Маршруты для teacher и student
 @app.get("/teacher")
